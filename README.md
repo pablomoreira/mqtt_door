@@ -3,4 +3,3 @@ This project was designed to automate the opening of a door. Using an i2c keyboa
 
 https://youtube.com/shorts/3Mb9CQwjaU8
 
-https://github.com/pablomoreira/mqtt_door
