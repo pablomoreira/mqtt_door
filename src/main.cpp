@@ -52,7 +52,6 @@ Signal relay(D3,LOW);
 WiFiUDP ntpUDP;
 NTPClient ntpClient(ntpUDP);
 
-//FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
 
 BearSSL::WiFiClientSecure *bear;// = new BearSSL::WiFiClientSecure();
 BearSSL::CertStore certStore;
@@ -110,7 +109,7 @@ void cb_getKey()
     if(keyPad->getKey() == '#'){
       if(buffer->len() > 0){
         if(task_mqtt_loop.isEnabled()){
-          mqttclient->publish("/frcon/informatica/door_ext/key", (char*)buffer->toArrayChar());
+          mqttclient->publish("/frcon/informatica/door_ext/key", (char*)buffer->toArrayChar());//Send password
         }
         Serial.printf("%s\n",buffer->toArrayChar());
         buffer->clear();
@@ -138,7 +137,6 @@ void cb_wifi(){
     if(task_getTime.isEnabled() == false) task_getTime.enable();
     if(task_mqtt_connection.isEnabled() == false && timeStatus() == 2) task_mqtt_connection.enable();
     led.upGrade(2);
-      //Serial.printf("ESP ip address %s\n", WiFi.localIP().toString().c_str()); 
     }
 }
 
@@ -165,7 +163,7 @@ void cb_mqtt_connection(){
         if(task_mqtt_loop.isEnabled() == false) task_mqtt_loop.enable();
         led.upGrade(3);
         Serial.printf("connected\n");
-        mqttclient->subscribe("/frcon/informatica/door_ext/open");
+        mqttclient->subscribe("/frcon/informatica/door_ext/open");//1 or 0 to open the door
         mqttclient->setCallback(OnMqttReceived);
 
       }
@@ -185,9 +183,7 @@ void cb_mqtt_loop(){
  
 
 void cb_getTime(){
-  time_t _t = now();
-  //Serial.printf("Date Time post tatus: %d %04d-%02d-%02d %02d:%02d:%02d\n",timeStatus(),year(_t),month(_t),day(_t),hour(_t),minute(_t),second(_t));
-  
+  time_t _t = now();  
   
   if((timeStatus() == timeNotSet ) || (timeStatus() == timeNeedsSync)){ 
     ntpClient.forceUpdate();
@@ -211,8 +207,8 @@ void cb_mqtt_sendTime(){
 
         sprintf(msg,"Time and tatus: %d %04d-%02d-%02d %02d:%02d:%02d",timeStatus(),year(_t),month(_t),day(_t),hour(_t),minute(_t),second(_t));
 
-        mqttclient->publish("/frcon/informatica/door_ext/time", msg);
-      //Serial.printf("%s\n",String(now()).c_str());
+        mqttclient->publish("/frcon/informatica/door_ext/time", msg);//Pub the time
+      
       }
 }
 
@@ -221,8 +217,7 @@ void cb_keyPadCheck(){
   if (!keyPad->isConnected()){
     time_t _t = now();
     char msg[256];
-    //Serial.printf("KeyPad Connect\n");
-    //keyPad.begin();
+    
     sprintf(msg,"%04d-%02d-%02d %02d:%02d:%02d KeyPad no Connect\n",year(_t),month(_t),day(_t),hour(_t),minute(_t),second(_t));
 
     Serial.printf(msg);
