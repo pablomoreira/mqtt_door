@@ -19,7 +19,7 @@ void cb_wifi();
 Task task_wifi(TASK_SECOND * 5, TASK_FOREVER, &cb_wifi, &runner);
 
 void cb_getKey();
-Task task_getKey(TASK_MILLISECOND * 5, TASK_FOREVER, &cb_getKey, &runner);
+Task task_getKey(TASK_MILLISECOND * 20, TASK_FOREVER, &cb_getKey, &runner);
 
 void cb_keyPadCheck();
 Task task_KeyPadCheck(TASK_SECOND * 1 , TASK_FOREVER, &cb_keyPadCheck, &runner);
@@ -98,14 +98,16 @@ void setup()
   
   mqttclient = new PubSubClient(*bear);
   mqttclient->setServer(MQTT_SERVER, MQTT_PORT);
-  setSyncInterval((u32_t)3600); 
+  setSyncInterval((u32_t)3600);
+  led.upGrade(1);
 }
 void loop(){runner.execute();}
 
 void cb_getKey()
 {
+  Serial.printf(".");
   if(keyPad->read() == true ){
-    
+    Serial.printf("%c",keyPad->getKey());
     if(keyPad->getKey() == '#'){
       if(buffer->len() > 0){
         if(task_mqtt_loop.isEnabled()){
@@ -119,7 +121,7 @@ void cb_getKey()
       if((millis() / 1000 - buffer->ttl())  > KEY_TTL) buffer->clear();
       buffer->add(keyPad->getKey()); 
     }
-    task_getKey.delay(300);
+    task_getKey.delay(200);
   }  
 }
 
@@ -134,7 +136,11 @@ void cb_wifi(){
   }
   else{
     if(task_Ota.isEnabled() == false) task_Ota.enable();
-    if(task_getTime.isEnabled() == false) task_getTime.enable();
+    if(task_getTime.isEnabled() == false) {
+        task_getTime.enable();
+        task_getTime.enableDelayed(3000);
+      }
+
     if(task_mqtt_connection.isEnabled() == false && timeStatus() == 2) task_mqtt_connection.enable();
     led.upGrade(2);
     }
@@ -172,6 +178,7 @@ void cb_mqtt_connection(){
         Serial.printf("failed, rc= %d\n",mqttclient->state());
         if(task_mqtt_sendTime.isEnabled() == true) task_mqtt_sendTime.disable();
         if(task_mqtt_loop.isEnabled() == true) task_mqtt_loop.disable();
+        task_mqtt_connection.enableDelayed(10000);
         led.downGrade(2);
       }
     }
@@ -183,7 +190,8 @@ void cb_mqtt_loop(){
  
 
 void cb_getTime(){
-  time_t _t = now();  
+  time_t _t = now();
+
   
   if((timeStatus() == timeNotSet ) || (timeStatus() == timeNeedsSync)){ 
     ntpClient.forceUpdate();
@@ -196,6 +204,7 @@ void cb_getTime(){
     _t = now();
     Serial.printf("Date Time post tatus: %d %04d-%02d-%02d %02d:%02d:%02d\n",timeStatus(),year(_t),month(_t),day(_t),hour(_t),minute(_t),second(_t));
   }
+
 }
 
 
@@ -233,6 +242,7 @@ void OnMqttReceived(char *topic, byte *payload, unsigned int length){
       task_relayClose.enableDelayed(5000);
       led.upGrade(25);
       printf("%c\n",payload[0]);
+      task_getKey.disable();
       break;
     case '0':
       task_getKey.delay(5000);
@@ -250,5 +260,6 @@ void cb_relayClose(){
   relay.low();
   task_relayClose.disable();
   led.downGrade(3);
-  task_led.enableDelayed(3000);
+  task_led.enableDelayed(1000);
+  task_getKey.enable();
 }
